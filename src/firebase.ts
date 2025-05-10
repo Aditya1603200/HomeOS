@@ -1,20 +1,46 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApp, FirebaseError } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getAnalytics } from 'firebase/analytics';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.REACT_APP_FIREBASE_APP_ID
+  apiKey: "AIzaSyD8IijO5nUlEwKkuKVmFOVRxLPlHviYvS0",
+  authDomain: "homeos-84923.firebaseapp.com",
+  projectId: "homeos-84923",
+  storageBucket: "homeos-84923.appspot.com",
+  messagingSenderId: "772818299440",
+  appId: "1:772818299440:web:3c8f05eacac1cbf6c8dbf5"
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+let app;
+try {
+  app = initializeApp(firebaseConfig);
+} catch (error) {
+  if (error instanceof FirebaseError && error.code === 'app/duplicate-app') {
+    app = getApp();
+  } else {
+    throw error;
+  }
+}
+
+// Initialize services
 export const db = getFirestore(app);
 export const auth = getAuth(app);
-export const analytics = getAnalytics(app); 
+export const analytics = getAnalytics(app);
+
+// Enable persistence for offline support
+// enableIndexedDbPersistence(db).catch((err) => {
+//   if (err.code === 'failed-precondition') {
+//     console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+//   } else if (err.code === 'unimplemented') {
+//     console.warn('The current browser does not support persistence.');
+//   }
+// });
+
+// Connect to emulators in development
+if (process.env.NODE_ENV === 'development') {
+  // connectAuthEmulator(auth, 'http://localhost:9099');
+  // connectFirestoreEmulator(db, 'localhost', 8080);
+} 

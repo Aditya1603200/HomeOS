@@ -1,29 +1,21 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material';
+import { Box, AppBar, Toolbar, Typography, Button } from '@mui/material';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import DeviceControls from './components/DeviceControls';
 import Reports from './pages/Reports';
-import { Box, AppBar, Toolbar, Typography, Button } from '@mui/material';
 
+// Create theme
 const theme = createTheme({
   palette: {
     mode: 'dark',
   },
 });
 
-const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentUser, loading } = useAuth();
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  return currentUser ? <>{children}</> : <Navigate to="/login" />;
-};
-
+// Navigation component
 const Navigation: React.FC = () => {
   const { currentUser, logout } = useAuth();
 
@@ -51,6 +43,18 @@ const Navigation: React.FC = () => {
   );
 };
 
+// Private route component
+const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentUser, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  return currentUser ? <>{children}</> : <Navigate to="/login" />;
+};
+
+// Main App component
 const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>

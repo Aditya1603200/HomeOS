@@ -7,6 +7,7 @@ import {
   createUserWithEmailAndPassword,
   User
 } from 'firebase/auth';
+import { FirebaseError } from 'firebase/app';
 import { auth } from '../firebase';
 
 interface AuthContextType {
@@ -37,19 +38,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error: unknown) {
+      if (error instanceof FirebaseError) {
+        if (error.code === 'auth/network-request-failed') {
+          throw new Error('Network error. Please check your internet connection.');
+        }
+        throw error;
+      }
+      throw new Error('An unexpected error occurred during login.');
+    }
   };
 
   const register = async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email, password);
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+    } catch (error: unknown) {
+      if (error instanceof FirebaseError) {
+        if (error.code === 'auth/network-request-failed') {
+          throw new Error('Network error. Please check your internet connection.');
+        }
+        if (error.code === 'auth/email-already-in-use') {
+          throw new Error('An account with this email already exists.');
+        }
+        if (error.code === 'auth/invalid-email') {
+          throw new Error('Invalid email address.');
+        }
+        if (error.code === 'auth/weak-password') {
+          throw new Error('Password is too weak. Please use a stronger password.');
+        }
+        throw error;
+      }
+      throw new Error('An unexpected error occurred during registration.');
+    }
   };
 
   const logout = async () => {
-    await signOut(auth);
+    try {
+      await signOut(auth);
+    } catch (error: unknown) {
+      if (error instanceof FirebaseError) {
+        if (error.code === 'auth/network-request-failed') {
+          throw new Error('Network error. Please check your internet connection.');
+        }
+        throw error;
+      }
+      throw new Error('An unexpected error occurred during logout.');
+    }
   };
 
   const value = {

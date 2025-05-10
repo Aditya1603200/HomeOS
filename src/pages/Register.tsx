@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { FirebaseError } from 'firebase/app';
 
 const Register: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -21,20 +22,62 @@ const Register: React.FC = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  const validatePassword = (password: string) => {
+    return password.length >= 6;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
 
+    // Validate email
+    if (!validateEmail(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    // Validate password
+    if (!validatePassword(password)) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+
+    // Check if passwords match
     if (password !== confirmPassword) {
-      return setError('Passwords do not match');
+      setError('Passwords do not match');
+      return;
     }
 
     try {
-      setError('');
       setLoading(true);
       await register(email, password);
       navigate('/dashboard');
     } catch (err) {
-      setError('Failed to create an account. Please try again.');
+      if (err instanceof FirebaseError) {
+        switch (err.code) {
+          case 'auth/email-already-in-use':
+            setError('An account with this email already exists');
+            break;
+          case 'auth/invalid-email':
+            setError('Invalid email address');
+            break;
+          case 'auth/operation-not-allowed':
+            setError('Email/password accounts are not enabled. Please contact support');
+            break;
+          case 'auth/weak-password':
+            setError('Password is too weak');
+            break;
+          default:
+            setError('Failed to create an account. Please try again.');
+        }
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -80,6 +123,7 @@ const Register: React.FC = () => {
               autoFocus
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              error={!!error && error.includes('email')}
             />
             <TextField
               margin="normal"
@@ -92,6 +136,8 @@ const Register: React.FC = () => {
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              error={!!error && error.includes('password')}
+              helperText="Password must be at least 6 characters long"
             />
             <TextField
               margin="normal"
@@ -104,6 +150,7 @@ const Register: React.FC = () => {
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              error={!!error && error.includes('match')}
             />
             <Button
               type="submit"
