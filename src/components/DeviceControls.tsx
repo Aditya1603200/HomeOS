@@ -11,6 +11,7 @@ import {
   useMediaQuery,
   Tooltip,
   Slider,
+  Paper,
 } from '@mui/material';
 import {
   Lightbulb,
@@ -26,6 +27,8 @@ import {
 import { doc, updateDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDeviceState } from '../hooks/useDeviceState';
+import { format } from 'date-fns';
 
 interface Device {
   id: string;
@@ -149,6 +152,10 @@ const DeviceControls: React.FC = () => {
         return theme.palette.primary.main;
     }
   };
+
+  if (devices.length === 0) {
+    return <Typography>Loading...</Typography>;
+  }
 
   return (
     <Box p={3}>
