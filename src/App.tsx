@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider, createTheme } from '@mui/material';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import DeviceControls from './components/DeviceControls';
 import Reports from './pages/Reports';
 import { Box, AppBar, Toolbar, Typography, Button } from '@mui/material';
@@ -59,6 +60,7 @@ const App: React.FC = () => {
             <Navigation />
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               <Route
                 path="/dashboard"
                 element={
