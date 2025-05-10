@@ -15,6 +15,7 @@
     "@types/node": "^16.18.31",
     "@types/react": "^18.2.6",
     "@types/react-dom": "^18.2.4",
+    "date-fns": "^2.30.0",
     "firebase": "^9.22.0",
     "framer-motion": "^10.12.16",
     "react": "^18.2.0",

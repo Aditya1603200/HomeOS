@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { doc, onSnapshot, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, Timestamp, setDoc } from 'firebase/firestore';
 
 interface DeviceState {
   status: boolean;
   lastChanged: Timestamp;
   deviceName: string;
 }
+
+type FirestoreDeviceData = {
+  [key: string]: any;
+} & DeviceState;
 
 export const useDeviceState = (deviceId: string) => {
   const [deviceState, setDeviceState] = useState<DeviceState | null>(null);
@@ -23,12 +27,13 @@ export const useDeviceState = (deviceId: string) => {
           setDeviceState(doc.data() as DeviceState);
         } else {
           // Initialize device if it doesn't exist
-          const initialData: DeviceState = {
+          const initialData: FirestoreDeviceData = {
             status: false,
             lastChanged: Timestamp.now(),
             deviceName: deviceId
           };
-          updateDoc(deviceRef, initialData);
+          // Use setDoc instead of updateDoc for initial document creation
+          setDoc(deviceRef, initialData);
           setDeviceState(initialData);
         }
         setLoading(false);
@@ -46,7 +51,7 @@ export const useDeviceState = (deviceId: string) => {
     if (!deviceState) return;
     
     const deviceRef = doc(db, 'devices', deviceId);
-    const newState = {
+    const newState: FirestoreDeviceData = {
       status: !deviceState.status,
       lastChanged: Timestamp.now(),
       deviceName: deviceState.deviceName

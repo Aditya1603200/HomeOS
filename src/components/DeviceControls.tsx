@@ -25,10 +25,11 @@ import {
   MeetingRoom,
 } from '@mui/icons-material';
 import { doc, updateDoc, onSnapshot, setDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { db } from '../firebase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useDeviceState } from '../hooks/useDeviceState';
 import { format } from 'date-fns';
+import { logActivity } from '../services/activityLogger';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Device {
   id: string;
@@ -37,25 +38,27 @@ interface Device {
   status: boolean;
   brightness?: number;
   location: string;
+  lastChanged?: Date;
 }
 
 const DeviceControls: React.FC = () => {
   const [devices, setDevices] = useState<Device[]>([]);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { currentUser } = useAuth();
 
   // Initialize devices in Firebase if they don't exist
   useEffect(() => {
     const initializeDevices = async () => {
       const devicesRef = doc(db, 'devices', 'status');
       const initialDevices = {
-        hallLight: { status: false, brightness: 100 },
-        kitchenLight: { status: false, brightness: 100 },
-        garageLight: { status: false, brightness: 100 },
-        bedroomLight: { status: false, brightness: 100 },
-        mainGate: { status: false },
-        balconyDoor: { status: false },
-        irrigationSystem: { status: false },
+        hallLight: { status: false, brightness: 100, lastChanged: new Date() },
+        kitchenLight: { status: false, brightness: 100, lastChanged: new Date() },
+        garageLight: { status: false, brightness: 100, lastChanged: new Date() },
+        bedroomLight: { status: false, brightness: 100, lastChanged: new Date() },
+        mainGate: { status: false, lastChanged: new Date() },
+        balconyDoor: { status: false, lastChanged: new Date() },
+        irrigationSystem: { status: false, lastChanged: new Date() },
       };
 
       try {
@@ -80,13 +83,13 @@ const DeviceControls: React.FC = () => {
       if (doc.exists()) {
         const data = doc.data();
         setDevices([
-          { id: 'hallLight', name: 'Hall Light', type: 'light', status: data.hallLight?.status || false, brightness: data.hallLight?.brightness || 100, location: 'Hall' },
-          { id: 'kitchenLight', name: 'Kitchen Light', type: 'light', status: data.kitchenLight?.status || false, brightness: data.kitchenLight?.brightness || 100, location: 'Kitchen' },
-          { id: 'garageLight', name: 'Garage Light', type: 'light', status: data.garageLight?.status || false, brightness: data.garageLight?.brightness || 100, location: 'Garage' },
-          { id: 'bedroomLight', name: 'Bedroom Light', type: 'light', status: data.bedroomLight?.status || false, brightness: data.bedroomLight?.brightness || 100, location: 'Bedroom' },
-          { id: 'mainGate', name: 'Main Gate', type: 'door', status: data.mainGate?.status || false, location: 'Entrance' },
-          { id: 'balconyDoor', name: 'Balcony Door', type: 'door', status: data.balconyDoor?.status || false, location: 'Balcony' },
-          { id: 'irrigationSystem', name: 'Irrigation System', type: 'irrigation', status: data.irrigationSystem?.status || false, location: 'Backyard' },
+          { id: 'hallLight', name: 'Hall Light', type: 'light', status: data.hallLight?.status || false, brightness: data.hallLight?.brightness || 100, location: 'Hall', lastChanged: data.hallLight?.lastChanged?.toDate() },
+          { id: 'kitchenLight', name: 'Kitchen Light', type: 'light', status: data.kitchenLight?.status || false, brightness: data.kitchenLight?.brightness || 100, location: 'Kitchen', lastChanged: data.kitchenLight?.lastChanged?.toDate() },
+          { id: 'garageLight', name: 'Garage Light', type: 'light', status: data.garageLight?.status || false, brightness: data.garageLight?.brightness || 100, location: 'Garage', lastChanged: data.garageLight?.lastChanged?.toDate() },
+          { id: 'bedroomLight', name: 'Bedroom Light', type: 'light', status: data.bedroomLight?.status || false, brightness: data.bedroomLight?.brightness || 100, location: 'Bedroom', lastChanged: data.bedroomLight?.lastChanged?.toDate() },
+          { id: 'mainGate', name: 'Main Gate', type: 'door', status: data.mainGate?.status || false, location: 'Entrance', lastChanged: data.mainGate?.lastChanged?.toDate() },
+          { id: 'balconyDoor', name: 'Balcony Door', type: 'door', status: data.balconyDoor?.status || false, location: 'Balcony', lastChanged: data.balconyDoor?.lastChanged?.toDate() },
+          { id: 'irrigationSystem', name: 'Irrigation System', type: 'irrigation', status: data.irrigationSystem?.status || false, location: 'Backyard', lastChanged: data.irrigationSystem?.lastChanged?.toDate() },
         ]);
       }
     });
@@ -99,10 +102,25 @@ const DeviceControls: React.FC = () => {
       const deviceRef = doc(db, 'devices', 'status');
       const device = devices.find(d => d.id === deviceId);
       if (device) {
+        const previousState = { status: device.status, brightness: device.brightness };
+        const newState = { status: !device.status, brightness: device.brightness };
+        
         const updateData = {
-          [`${deviceId}.status`]: !device.status
+          [`${deviceId}.status`]: !device.status,
+          [`${deviceId}.lastChanged`]: new Date()
         };
+        
         await updateDoc(deviceRef, updateData);
+        
+        // Log the activity
+        await logActivity({
+          deviceId,
+          deviceName: device.name,
+          action: 'toggle',
+          previousState,
+          newState,
+          userId: currentUser?.uid || 'anonymous'
+        });
       }
     } catch (error) {
       console.error('Error updating device status:', error);
@@ -112,9 +130,26 @@ const DeviceControls: React.FC = () => {
   const handleBrightnessChange = async (deviceId: string, brightness: number) => {
     try {
       const deviceRef = doc(db, 'devices', 'status');
-      await updateDoc(deviceRef, {
-        [`${deviceId}.brightness`]: brightness
-      });
+      const device = devices.find(d => d.id === deviceId);
+      if (device) {
+        const previousState = { status: device.status, brightness: device.brightness };
+        const newState = { status: device.status, brightness };
+        
+        await updateDoc(deviceRef, {
+          [`${deviceId}.brightness`]: brightness,
+          [`${deviceId}.lastChanged`]: new Date()
+        });
+        
+        // Log the activity
+        await logActivity({
+          deviceId,
+          deviceName: device.name,
+          action: 'brightness_change',
+          previousState,
+          newState,
+          userId: currentUser?.uid || 'anonymous'
+        });
+      }
     } catch (error) {
       console.error('Error updating brightness:', error);
     }
@@ -250,6 +285,11 @@ const DeviceControls: React.FC = () => {
                           <Typography variant="body2" color="text.secondary">
                             Location: {device.location}
                           </Typography>
+                          {device.lastChanged && (
+                            <Typography variant="body2" color="text.secondary">
+                              Last Changed: {format(device.lastChanged, 'PPpp')}
+                            </Typography>
+                          )}
                         </Box>
                       </motion.div>
                     )}
