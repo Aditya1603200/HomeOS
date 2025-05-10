@@ -94,7 +94,7 @@ const Reports: React.FC = () => {
           </TableHead>
           <TableBody>
             {logs.map((log) => (
-              <TableRow key={log.id}>
+              <TableRow key={log.id || log.deviceId + log.timestamp.toMillis()}>
                 <TableCell>
                   {format(log.timestamp.toDate(), 'PPpp')}
                 </TableCell>
