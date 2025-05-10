@@ -7,9 +7,10 @@ import {
   Container,
   Paper,
   Alert,
+  Link,
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -21,6 +22,7 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     try {
       setError('');
       setLoading(true);
@@ -54,7 +56,7 @@ const Login: React.FC = () => {
           }}
         >
           <Typography component="h1" variant="h5">
-            Home Automation Login
+            Sign In
           </Typography>
           {error && (
             <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
@@ -95,6 +97,11 @@ const Login: React.FC = () => {
             >
               Sign In
             </Button>
+            <Box sx={{ textAlign: 'center' }}>
+              <Link component={RouterLink} to="/register" variant="body2">
+                Don't have an account? Sign up
+              </Link>
+            </Box>
           </Box>
         </Paper>
       </Box>
