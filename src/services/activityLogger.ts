@@ -2,6 +2,7 @@ import { db } from '../firebase';
 import { collection, addDoc, query, where, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 
 export interface ActivityLog {
+  id?: string;
   deviceId: string;
   deviceName: string;
   action: string;
@@ -11,7 +12,7 @@ export interface ActivityLog {
   userId: string;
 }
 
-export const logActivity = async (log: Omit<ActivityLog, 'timestamp'>) => {
+export const logActivity = async (log: Omit<ActivityLog, 'timestamp' | 'id'>) => {
   try {
     await addDoc(collection(db, 'activityLogs'), {
       ...log,
