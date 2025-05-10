@@ -44,3 +44,21 @@ if (process.env.NODE_ENV === 'development') {
   // connectAuthEmulator(auth, 'http://localhost:9099');
   // connectFirestoreEmulator(db, 'localhost', 8080);
 } 
+
+// Example usage
+const deviceData = {
+  name: "Living Room Light",
+  type: "light",
+  status: false,
+  value: 0,
+  lastUpdated: new Date()
+};
+
+// Add the device data to Firestore
+db.collection('devices').add(deviceData)
+  .then((docRef) => {
+    console.log('Device data added successfully! Document ID:', docRef.id);
+  })
+  .catch((error) => {
+    console.error('Error adding device data:', error);
+  }); 

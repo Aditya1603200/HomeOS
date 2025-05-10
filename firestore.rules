@@ -1,21 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow authenticated users to read and write their own data
-    match /users/{userId} {
+    // Allow users to read and write their own device data
+    match /users/{userId}/devices/{deviceId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Allow authenticated users to read and write device status
-    match /devices/{deviceId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-    
-    // Allow authenticated users to read and write activity logs
-    match /activityLogs/{logId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+    // Allow users to read and write their own activity logs
+    match /users/{userId}/activityLogs/{logId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 } 

@@ -1,68 +1,89 @@
 import { useState, useEffect } from 'react';
+import { 
+  collection, 
+  doc, 
+  onSnapshot, 
+  updateDoc,
+  query,
+  where,
+  orderBy
+} from 'firebase/firestore';
 import { db } from '../firebase';
-import { doc, onSnapshot, updateDoc, Timestamp, setDoc } from 'firebase/firestore';
+import { useAuth } from '../contexts/AuthContext';
+import { logActivity } from '../services/activityLogger';
 
-interface DeviceState {
+export interface DeviceState {
+  id: string;
+  name: string;
+  type: 'light' | 'fan' | 'ac' | 'tv';
   status: boolean;
-  lastChanged: Timestamp;
-  deviceName: string;
+  value?: number; // For devices with variable control (like fan speed)
+  lastUpdated: Date;
 }
 
-type FirestoreDeviceData = {
-  [key: string]: any;
-} & DeviceState;
-
-export const useDeviceState = (deviceId: string) => {
-  const [deviceState, setDeviceState] = useState<DeviceState | null>(null);
+export const useDeviceState = () => {
+  const [devices, setDevices] = useState<DeviceState[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { currentUser } = useAuth();
 
   useEffect(() => {
-    const deviceRef = doc(db, 'devices', deviceId);
+    if (!currentUser) {
+      setDevices([]);
+      setLoading(false);
+      return;
+    }
+
+    // Reference to the user's devices collection
+    const devicesRef = collection(db, `users/${currentUser.uid}/devices`);
     
-    // Subscribe to real-time updates
-    const unsubscribe = onSnapshot(deviceRef, 
-      (doc) => {
-        if (doc.exists()) {
-          setDeviceState(doc.data() as DeviceState);
-        } else {
-          // Initialize device if it doesn't exist
-          const initialData: FirestoreDeviceData = {
-            status: false,
-            lastChanged: Timestamp.now(),
-            deviceName: deviceId
-          };
-          // Use setDoc instead of updateDoc for initial document creation
-          setDoc(deviceRef, initialData);
-          setDeviceState(initialData);
-        }
-        setLoading(false);
-      },
-      (err) => {
-        setError(err.message);
-        setLoading(false);
-      }
-    );
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(devicesRef, (snapshot) => {
+      const deviceList: DeviceState[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        deviceList.push({
+          id: doc.id,
+          name: data.name,
+          type: data.type,
+          status: data.status,
+          value: data.value,
+          lastUpdated: data.lastUpdated.toDate()
+        });
+      });
+      setDevices(deviceList);
+      setLoading(false);
+    });
 
     return () => unsubscribe();
-  }, [deviceId]);
+  }, [currentUser]);
 
-  const toggleDevice = async () => {
-    if (!deviceState) return;
-    
-    const deviceRef = doc(db, 'devices', deviceId);
-    const newState: FirestoreDeviceData = {
-      status: !deviceState.status,
-      lastChanged: Timestamp.now(),
-      deviceName: deviceState.deviceName
-    };
+  const updateDeviceState = async (deviceId: string, updates: Partial<DeviceState>) => {
+    if (!currentUser) throw new Error('User not authenticated');
+
+    const deviceRef = doc(db, `users/${currentUser.uid}/devices/${deviceId}`);
     
     try {
-      await updateDoc(deviceRef, newState);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update device state');
+      await updateDoc(deviceRef, {
+        ...updates,
+        lastUpdated: new Date()
+      });
+
+      // Log the activity
+      await logActivity({
+        type: 'device_update',
+        deviceId,
+        deviceName: devices.find(d => d.id === deviceId)?.name || 'Unknown Device',
+        details: `Device ${updates.status ? 'turned on' : 'turned off'}${updates.value ? ` with value ${updates.value}` : ''}`
+      });
+    } catch (error) {
+      console.error('Error updating device:', error);
+      throw error;
     }
   };
 
-  return { deviceState, loading, error, toggleDevice };
+  return {
+    devices,
+    loading,
+    updateDeviceState
+  };
 }; 
