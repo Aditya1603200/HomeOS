@@ -1,7 +1,8 @@
 import { initializeApp, getApp, FirebaseError } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, DocumentReference } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getAnalytics } from 'firebase/analytics';
+import { initializeDevices } from './services/deviceService';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -30,6 +31,9 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const analytics = getAnalytics(app);
 
+// Initialize devices
+initializeDevices().catch(console.error);
+
 // Enable persistence for offline support
 // enableIndexedDbPersistence(db).catch((err) => {
 //   if (err.code === 'failed-precondition') {
@@ -55,10 +59,10 @@ const deviceData = {
 };
 
 // Add the device data to Firestore
-db.collection('devices').add(deviceData)
-  .then((docRef) => {
+addDoc(collection(db, 'devices'), deviceData)
+  .then((docRef: DocumentReference) => {
     console.log('Device data added successfully! Document ID:', docRef.id);
   })
-  .catch((error) => {
+  .catch((error: Error) => {
     console.error('Error adding device data:', error);
   }); 

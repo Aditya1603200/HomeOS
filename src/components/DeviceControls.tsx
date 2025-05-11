@@ -52,13 +52,53 @@ const DeviceControls: React.FC = () => {
     const initializeDevices = async () => {
       const devicesRef = doc(db, 'devices', 'status');
       const initialDevices = {
-        hallLight: { status: false, brightness: 100, lastChanged: new Date() },
-        kitchenLight: { status: false, brightness: 100, lastChanged: new Date() },
-        garageLight: { status: false, brightness: 100, lastChanged: new Date() },
-        bedroomLight: { status: false, brightness: 100, lastChanged: new Date() },
-        mainGate: { status: false, lastChanged: new Date() },
-        balconyDoor: { status: false, lastChanged: new Date() },
-        irrigationSystem: { status: false, lastChanged: new Date() },
+        hallLight: { 
+          name: 'Hall Light',
+          type: 'light',
+          status: false, 
+          brightness: 100, 
+          location: 'Hall',
+          lastChanged: new Date() 
+        },
+        kitchenLight: { 
+          name: 'Kitchen Light',
+          type: 'light',
+          status: false, 
+          brightness: 100, 
+          location: 'Kitchen',
+          lastChanged: new Date() 
+        },
+        mainGate: { 
+          name: 'Main Gate',
+          type: 'door',
+          status: false, 
+          isLocked: true,
+          autoLock: false,
+          location: 'Entrance',
+          lastChanged: new Date() 
+        },
+        balconyDoor: { 
+          name: 'Balcony Door',
+          type: 'door',
+          status: false, 
+          isLocked: true,
+          autoLock: false,
+          location: 'Balcony',
+          lastChanged: new Date() 
+        },
+        irrigationSystem: { 
+          name: 'Irrigation System',
+          type: 'irrigation',
+          status: false, 
+          moistureLevel: 0,
+          schedule: {
+            startTime: '06:00',
+            endTime: '07:00',
+            days: [1, 2, 3, 4, 5, 6, 7]
+          },
+          location: 'Backyard',
+          lastChanged: new Date() 
+        }
       };
 
       try {
@@ -102,8 +142,12 @@ const DeviceControls: React.FC = () => {
       const deviceRef = doc(db, 'devices', 'status');
       const device = devices.find(d => d.id === deviceId);
       if (device) {
-        const previousState = { status: device.status, brightness: device.brightness };
-        const newState = { status: !device.status, brightness: device.brightness };
+        const previousState = device.type === 'light' 
+          ? { status: device.status, brightness: device.brightness }
+          : { status: device.status };
+        const newState = device.type === 'light'
+          ? { status: !device.status, brightness: device.brightness }
+          : { status: !device.status };
         
         const updateData = {
           [`${deviceId}.status`]: !device.status,

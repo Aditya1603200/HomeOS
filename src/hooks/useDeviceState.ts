@@ -70,10 +70,12 @@ export const useDeviceState = () => {
 
       // Log the activity
       await logActivity({
-        type: 'device_update',
+        action: 'device_update',
         deviceId,
         deviceName: devices.find(d => d.id === deviceId)?.name || 'Unknown Device',
-        details: `Device ${updates.status ? 'turned on' : 'turned off'}${updates.value ? ` with value ${updates.value}` : ''}`
+        previousState: { status: updates.status, value: updates.value },
+        newState: updates,
+        userId: currentUser.uid
       });
     } catch (error) {
       console.error('Error updating device:', error);
